@@ -44,6 +44,8 @@ dependencies:
 
   flutter_blue_plus: ^1.30.6
   flutter_launcher_icons: ^0.13.1
+  location: ^5.0.3
+  app_settings: ^5.1.1
 
 dev_dependencies:
   flutter_test:
@@ -59,7 +61,7 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/CMUIhaler.png"
+  image_path: "assets/images/CMUIhaler.png"
 
 
 # For information on the generic Dart part of this file, see the
@@ -74,8 +76,8 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
+  assets:
+    - assets/images/
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see

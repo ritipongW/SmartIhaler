@@ -38,7 +38,7 @@ class _Homepage_mainState extends State<HomePage_main>{
   int? changvalue = null;
 
   // config ตัววัด spo2%
-  //FlutterBlue flutterBluefinger = FlutterBlue.instance;
+  FlutterBluePlus? flutterBluefinger;
   BluetoothDevice? connectedDevicefinger;
   BluetoothCharacteristic? targetCharacteristicfinger;
   String receivedDatafinger = '';
@@ -48,6 +48,8 @@ class _Homepage_mainState extends State<HomePage_main>{
   List<BluetoothDevice> _systemDevices = [];
   List<ScanResult> _scanResults = [];
 
+  late ScanResult BlueToothScanDev;
+
   bool _isScanning = false;
   late StreamSubscription<List<ScanResult>> _scanResultsSubscription;
   late StreamSubscription<bool> _isScanningSubscription;
@@ -56,33 +58,15 @@ class _Homepage_mainState extends State<HomePage_main>{
   void initState() {
     super.initState();
 
-    _scanResultsSubscription = FlutterBluePlus.scanResults.listen((results) {
-      _scanResults = results;
-      if (mounted) {
-        setState(() {});
-      }
-    }, onError: (e) {
-      Snackbar.show(ABC.b, prettyException("Scan Error:", e), success: false);
-    });
+    // เตรียมอ่านค่า inherler DevIDName, MAC Address Pulse Oximeter Device
 
-    _isScanningSubscription = FlutterBluePlus.isScanning.listen((state) {
-      _isScanning = state;
-      if (mounted) {
-        setState(() {});
-      }
-    });
+    // Check permission of Storage, Location GPS
 
     // เมื่อแอปเริ่มทำงาน
     startBluetoothConnectionpush();
   }
 
-  startBluetoothConnectionpush() async {
-    Map<Permission, PermissionStatus> statuses = await [
-      Permission.manageExternalStorage,
-      Permission.storage,
-      Permission.location
-    ].request();
-
+  Future<void> StartScanning() async{
     try {
       _systemDevices = await FlutterBluePlus.systemDevices;
     } catch (e) {
@@ -97,6 +81,52 @@ class _Homepage_mainState extends State<HomePage_main>{
     } catch (e) {
       Snackbar.show(ABC.b, prettyException("Start Scan Error:", e), success: false);
     }
+  }
+
+  startBluetoothConnectionpush() async {
+    Map<Permission, PermissionStatus> statuses = await [
+      Permission.manageExternalStorage,
+      Permission.storage,
+      Permission.location
+    ].request();
+
+    StartScanning();
+
+    _scanResultsSubscription = FlutterBluePlus.onScanResults.listen((results) async{
+
+      if(results.isNotEmpty){
+        ScanResult scanResult = results.last;
+        log('${scanResult.device.remoteId}: "${scanResult.advertisementData.advName}" found!');
+        if(scanResult.device.remoteId.toString() == "30:30:F9:34:68:F5") {
+          setState(() {
+            connectionStatuspush = 'กำลังทำการเชื่อมต่อ';
+          });
+
+          await Future.delayed(const Duration(seconds: 3));
+
+          await scanResult.device.connect().then((result){
+            setState(() {
+              connectedDevicepush = scanResult.device;
+              connectionStatuspush = 'เชื่อมต่อสำเสร็จ';
+            });
+          });
+        }
+      }
+
+      if (mounted) {
+        setState(() {});
+      }
+    }, onError: (e) {
+      Snackbar.show(ABC.b, prettyException("Scan Error:", e), success: false);
+    });
+
+    _isScanningSubscription = FlutterBluePlus.isScanning.listen((state) {
+      _isScanning = state;
+      if (mounted) {
+        setState(() {});
+      }
+    });
+
 
   }
 
@@ -104,8 +134,20 @@ class _Homepage_mainState extends State<HomePage_main>{
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title),
-        backgroundColor: Color.fromARGB(255, 134, 71, 129),
+        centerTitle: true,
+        title: Text('CMU Smart Inhaler'),
+        leading: Image.asset('assets/images/CMUIhaler.png'),
+        actions: <Widget>[
+          IconButton(
+            icon: Icon(Icons.settings,
+              color: Colors.white,
+            ),
+            onPressed: () {
+              // do something
+            },
+          )
+        ],
+        backgroundColor: Colors.teal.shade600,
       ),
       body: Center(
         child: Container(
@@ -117,14 +159,7 @@ class _Homepage_mainState extends State<HomePage_main>{
               SizedBox(
                 height: 10,
               ),
-                Text(
-                  'สถานะการเชื่อมต่อ: $connectionStatuspush',
-                  style: TextStyle(
-                    fontSize: 20.0, // ปรับขนาดตัวหนังสือตามต้องการ
-                    fontWeight: FontWeight.bold, // ตั้งค่าความหนาของตัวหนังสือ
-                    color: Color.fromARGB(255, 4, 1, 8),
-                  ),
-                ),
+
               if (connectedDevicepush != null)
                 Text(
                   'เชื่อมต่อเครื่องพ่น: ${connectedDevicepush!.name} ',
@@ -137,6 +172,14 @@ class _Homepage_mainState extends State<HomePage_main>{
 
               if (finger == true)
                 homepage2.HomePage_monitor(),
+              Text(
+                'สถานะการเชื่อมต่อ: $connectionStatuspush',
+                style: TextStyle(
+                  fontSize: 20.0, // ปรับขนาดตัวหนังสือตามต้องการ
+                  fontWeight: FontWeight.bold, // ตั้งค่าความหนาของตัวหนังสือ
+                  color: Color.fromARGB(255, 4, 1, 8),
+                ),
+              ),
             ],
           ),
         ),
